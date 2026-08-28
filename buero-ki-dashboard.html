@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanzlei Pilot — KI-Büroassistent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#faf7f3;
+    --surface:#ffffff;
+    --surface-sunken:#f4ede4;
+    --ink:#241d17;
+    --ink-soft:#726357;
+    --ink-mute:#ad9d8e;
+    --line:#ece1d4;
+    --line-strong:#ddc9b3;
+    --brand:#2c2420;
+    --brand-ink:#ffffff;
+    --accent:#e8703a;
+    --accent-soft:#fce3d3;
+    --ok:#3f8f6a;
+    --ok-soft:#e4f3ec;
+    --warn:#c2861f;
+    --warn-soft:#faedd0;
+    --crit:#cf5238;
+    --crit-soft:#fbe3db;
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:16px;
+    --shadow-card:0 1px 2px rgba(36,29,23,0.05), 0 1px 1px rgba(36,29,23,0.03);
+    --shadow-pop:0 12px 32px rgba(36,29,23,0.16);
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Sora', system-ui, sans-serif;
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  button{font-family:inherit;}
+  a{color:inherit;}
+
+  :focus-visible{
+    outline:2px solid var(--brand);
+    outline-offset:2px;
+    border-radius:4px;
+  }
+
+  /* ---------- Shell ---------- */
+  .shell{display:flex; min-height:100vh;}
+
+  .sidebar{
+    width:230px;
+    flex-shrink:0;
+    background:var(--brand);
+    color:var(--brand-ink);
+    display:flex;
+    flex-direction:column;
+    padding:18px 12px;
+    position:sticky;
+    top:0;
+    height:100vh;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    padding:6px 10px 20px 10px;
+  }
+  .brand-mark{
+    width:30px;height:30px;border-radius:8px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Sora';font-weight:800;font-size:14px;color:#1c1204;
+    flex-shrink:0;
+  }
+  .brand-name{font-family:'Sora';font-weight:700;font-size:15px;letter-spacing:-0.01em;}
+  .brand-sub{font-size:10.5px;color:rgba(255,255,255,0.55); margin-top:1px;}
+
+  .nav{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 11px;border-radius:8px;
+    background:transparent;border:none;color:rgba(255,255,255,0.72);
+    font-size:13.2px; font-weight:500; text-align:left; cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+    width:100%;position:relative;
+  }
+  .nav-item svg{flex-shrink:0;opacity:0.9;}
+  .nav-item:hover{background:rgba(255,255,255,0.08); color:#fff;}
+  .nav-item.active{background:rgba(255,255,255,0.14); color:#fff;}
+  .nav-item.active::before{
+    content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;
+    background:var(--accent);border-radius:0 3px 3px 0;
+  }
+  .nav-badge{
+    margin-left:auto; font-size:10.5px; font-weight:600;
+    background:rgba(255,255,255,0.16); padding:1px 6px; border-radius:20px;
+    color:#fff;
+  }
+  .nav-badge.crit{background:var(--crit); color:#fff;}
+
+  .nav-section-label{
+    font-size:10px; text-transform:uppercase; letter-spacing:0.08em;
+    color:rgba(255,255,255,0.38); padding:14px 11px 4px;
+    font-weight:600;
+  }
+
+  .sidebar-foot{
+    border-top:1px solid rgba(255,255,255,0.12);
+    padding-top:12px; margin-top:8px;
+    display:flex; align-items:center; gap:9px;
+    padding-left:11px;
+  }
+  .avatar{
+    width:28px;height:28px;border-radius:50%;
+    background:var(--accent-soft); color:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11.5px; font-weight:700; flex-shrink:0;
+  }
+  .sidebar-foot-name{font-size:12.5px;font-weight:600;color:#fff;}
+  .sidebar-foot-role{font-size:10.5px;color:rgba(255,255,255,0.5);}
+
+  /* mobile sidebar */
+  .sidebar-close{display:none;}
+
+  /* ---------- Main ---------- */
+  .main{flex:1; min-width:0; display:flex; flex-direction:column;}
+
+  .topbar{
+    display:flex; align-items:center; gap:14px;
+    padding:14px 26px; background:var(--surface);
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:20;
+  }
+  .hamburger{
+    display:none; background:none;border:1px solid var(--line);border-radius:8px;
+    width:34px;height:34px;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .search{
+    flex:1; max-width:420px;
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface-sunken); border:1px solid transparent;
+    border-radius:9px; padding:8px 12px; color:var(--ink-mute);
+  }
+  .search input{
+    border:none;background:transparent;outline:none;flex:1;
+    font-size:13px;color:var(--ink);
+  }
+  .search:focus-within{border-color:var(--line-strong); background:var(--surface);}
+  .topbar-right{margin-left:auto; display:flex; align-items:center; gap:10px;}
+  .icon-btn{
+    width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
+    background:var(--surface); display:flex;align-items:center;justify-content:center;
+    cursor:pointer; position:relative; color:var(--ink-soft);
+  }
+  .icon-btn:hover{background:var(--surface-sunken);}
+  .dot-alert{
+    position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;
+    background:var(--crit); border:2px solid var(--surface);
+  }
+  .topbar-date{font-size:12.5px;color:var(--ink-mute); font-weight:500;}
+
+  .content{padding:24px 26px 60px; max-width:1240px; width:100%; margin:0 auto;}
+
+  .view{display:none;}
+  .view.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .page-head{display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap;}
+  .page-title{font-size:23px; font-weight:700; margin:0;}
+  .page-sub{color:var(--ink-mute); font-size:13px; margin-top:3px;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:8px 14px; border-radius:8px; border:1px solid var(--line-strong);
+    background:var(--surface); font-size:12.8px; font-weight:600; cursor:pointer;
+    color:var(--ink);
+  }
+  .btn:hover{background:var(--surface-sunken);}
+  .btn-primary{background:var(--brand); border-color:var(--brand); color:#fff;}
+  .btn-primary:hover{background:#3a2f28;}
+  .btn-accent{background:var(--accent); border-color:var(--accent); color:#241705;}
+
+  /* ---------- Grid / Cards ---------- */
+  .grid{display:grid; gap:16px;}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:2fr 1fr;}
+  .grid-2{grid-template-columns:1fr 1fr;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
+  }
+  .card-pad{padding:18px 18px;}
+  .card-head{display:flex;align-items:center;justify-content:space-between; margin-bottom:14px;}
+  .card-title{font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .card-link{font-size:12px; color:var(--brand); font-weight:600; cursor:pointer; background:none;border:none;}
+  .card-link:hover{text-decoration:underline;}
+
+  /* KPI */
+  .kpi{padding:16px 18px;}
+  .kpi-top{display:flex;align-items:center;justify-content:space-between;}
+  .kpi-icon{
+    width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  }
+  .kpi-value{font-family:'Sora'; font-size:27px; font-weight:700; margin-top:12px; line-height:1;}
+  .kpi-label{font-size:12.5px; color:var(--ink-mute); margin-top:5px; font-weight:500;}
+  .kpi-trend{font-size:11px; font-weight:600; margin-top:8px; display:inline-flex; align-items:center; gap:3px;}
+
+  /* Lists */
+  .row-list{display:flex; flex-direction:column;}
+  .list-row{
+    display:flex; align-items:center; gap:12px;
+    padding:11px 0; border-bottom:1px solid var(--line);
+  }
+  .list-row:last-child{border-bottom:none; padding-bottom:2px;}
+
+  .pill{
+    font-size:10.5px; font-weight:700; padding:2.5px 8px; border-radius:20px;
+    white-space:nowrap; letter-spacing:0.01em;
+  }
+  .pill-hoch{background:var(--crit-soft); color:var(--crit);}
+  .pill-mittel{background:var(--warn-soft); color:var(--warn);}
+  .pill-niedrig{background:var(--ok-soft); color:var(--ok);}
+  .pill-neutral{background:var(--surface-sunken); color:var(--ink-soft);}
+  .pill-brand{background:var(--accent-soft); color:var(--accent);}
+  .pill-bereich{background:#e9e3fb; color:#5b3fc4;}
+  .pill-warn{background:var(--warn-soft); color:var(--warn);}
+  .pill-crit{background:var(--crit-soft); color:var(--crit);}
+  .pill-ok{background:var(--ok-soft); color:var(--ok);}
+
+  .initials{
+    width:32px;height:32px;border-radius:9px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700; font-family:'Sora';
+  }
+
+  /* AI recommendation card */
+  .ai-card{
+    background:linear-gradient(155deg,#3a2c22 0%, #241a13 100%);
+    color:#fff; border-radius:var(--radius-lg); padding:18px 20px;
+    position:relative; overflow:hidden;
+  }
+  .ai-card::after{
+    content:""; position:absolute; right:-30px; top:-30px; width:150px; height:150px;
+    background:radial-gradient(circle, rgba(232,112,58,0.4), transparent 70%);
+  }
+  .ai-reco{
+    display:flex; gap:10px; align-items:flex-start; padding:10px 0;
+    border-bottom:1px solid rgba(255,255,255,0.12); font-size:12.8px;
+  }
+  .ai-reco:last-child{border-bottom:none;}
+  .ai-reco-dot{width:6px;height:6px;border-radius:50%;background:var(--accent); margin-top:6px; flex-shrink:0;}
+
+  /* Table */
+  table{width:100%; border-collapse:collapse; font-size:12.8px;}
+  thead th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-mute); font-weight:600; padding:0 12px 10px; border-bottom:1px solid var(--line);
+  }
+  tbody td{padding:12px 12px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr{cursor:pointer; transition:background .12s;}
+  tbody tr:hover{background:var(--surface-sunken);}
+  .cell-main{font-weight:600;}
+  .cell-sub{color:var(--ink-mute); font-size:11.8px; margin-top:1px;}
+
+  .filter-bar{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+  .chip{
+    padding:6px 12px; border-radius:20px; border:1px solid var(--line-strong);
+    background:var(--surface); font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-soft);
+  }
+  .chip.active{background:var(--brand); border-color:var(--brand); color:#fff;}
+
+  /* Mandanten grid */
+  .mandant-card{padding:16px 16px 14px;}
+  .mandant-top{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .mandant-name{font-weight:700; font-size:14px;}
+  .mandant-branche{font-size:11.5px; color:var(--ink-mute);}
+  .mandant-stats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0;}
+  .mstat{background:var(--surface-sunken); border-radius:8px; padding:8px 10px;}
+  .mstat-val{font-family:'Sora'; font-weight:700; font-size:16px;}
+  .mstat-lbl{font-size:10.5px; color:var(--ink-mute); margin-top:1px;}
+  .mandant-foot{display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color:var(--ink-mute); border-top:1px solid var(--line); padding-top:10px;}
+
+  /* Kalender */
+  .cal-day{
+    display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line);
+  }
+  .cal-time{width:56px; flex-shrink:0; font-size:12px; font-weight:600; color:var(--ink-mute); font-family:'IBM Plex Mono';}
+  .cal-event{flex:1; background:var(--surface-sunken); border-left:3px solid var(--brand); border-radius:8px; padding:8px 12px;}
+  .cal-event.ki{border-left-color:var(--accent); background:var(--accent-soft);}
+  .cal-event-title{font-weight:600; font-size:13px;}
+  .cal-event-meta{font-size:11.5px; color:var(--ink-mute); margin-top:2px;}
+
+  .mini-cal{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center;}
+  .mini-cal .dow{font-size:10px; color:var(--ink-mute); font-weight:600; padding-bottom:6px;}
+  .mini-cal .d{
+    padding:7px 0; border-radius:7px; font-size:12px; cursor:pointer; position:relative;
+  }
+  .mini-cal .d:hover{background:var(--surface-sunken);}
+  .mini-cal .d.today{background:var(--brand); color:#fff; font-weight:700;}
+  .mini-cal .d.has-event::after{
+    content:""; position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+    width:4px; height:4px; border-radius:50%; background:var(--accent);
+  }
+  .mini-cal .d.muted{color:var(--ink-mute); opacity:0.4;}
+
+  /* Aufgaben (Kanban-ish columns) */
+  .task-cols{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .task-col-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; padding:0 2px;}
+  .task-col-title{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-soft);}
+  .task-count{font-size:11px; background:var(--surface-sunken); padding:1px 7px; border-radius:20px; font-weight:700; color:var(--ink-soft);}
+  .task-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:11px 12px; margin-bottom:9px; box-shadow:var(--shadow-card); cursor:pointer;
+  }
+  .task-card:hover{border-color:var(--line-strong);}
+  .task-title{font-size:12.8px; font-weight:600; line-height:1.35;}
+  .task-meta{display:flex; align-items:center; gap:6px; margin-top:9px;}
+  .task-check{
+    width:16px; height:16px; border-radius:5px; border:1.6px solid var(--line-strong); flex-shrink:0;
+  }
+  .task-card.overdue{border-left:3px solid var(--crit);}
+
+  /* Fristen */
+  .frist-row{display:flex; align-items:center; gap:14px; padding:13px 0; border-bottom:1px solid var(--line);}
+  .frist-row:last-child{border-bottom:none;}
+  .frist-days{
+    width:54px; height:54px; border-radius:12px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .frist-days .n{font-family:'Sora'; font-weight:800; font-size:17px; line-height:1;}
+  .frist-days .u{font-size:8.5px; font-weight:600; text-transform:uppercase; margin-top:1px;}
+
+  /* KI-Assistent */
+  .chat-wrap{display:flex; flex-direction:column; height:calc(100vh - 220px); min-height:420px;}
+  .chat-scroll{flex:1; overflow-y:auto; padding:6px 4px 14px; display:flex; flex-direction:column; gap:14px;}
+  .msg{display:flex; gap:10px; max-width:78%;}
+  .msg.user{align-self:flex-end; flex-direction:row-reverse;}
+  .msg-avatar{
+    width:28px;height:28px;border-radius:8px; flex-shrink:0;
+    display:flex;align-items:center;justify-content:center; font-size:11px; font-weight:700;
+  }
+  .msg-avatar.ai{background:var(--brand); color:#fff;}
+  .msg-avatar.user{background:var(--accent-soft); color:var(--accent);}
+  .msg-bubble{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:11px 14px; font-size:13px; line-height:1.5;
+  }
+  .msg.user .msg-bubble{background:var(--brand); color:#fff; border-color:var(--brand);}
+  .msg-bubble ul{margin:6px 0 0; padding-left:18px;}
+  .msg-bubble li{margin-bottom:3px;}
+  .suggestion-row{display:flex; gap:8px; flex-wrap:wrap; padding:12px 4px; border-top:1px solid var(--line);}
+  .suggestion-chip{
+    padding:7px 13px; border-radius:20px; border:1px solid var(--line-strong); background:var(--surface);
+    font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-soft);
+  }
+  .suggestion-chip:hover{background:var(--surface-sunken); border-color:var(--brand);}
+  .chat-input-bar{
+    display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--line);
+    border-radius:12px; background:var(--surface); margin-top:6px;
+  }
+  .chat-input-bar input{flex:1; border:none; outline:none; font-size:13px; background:transparent;}
+
+  .mic-btn{
+    width:34px; height:34px; border-radius:50%; border:1px solid var(--line-strong);
+    background:var(--surface); color:var(--ink-soft); display:flex; align-items:center;
+    justify-content:center; cursor:pointer; flex-shrink:0;
+  }
+  .mic-btn:hover{background:var(--surface-sunken);}
+  .mic-btn.listening{
+    background:var(--accent); border-color:var(--accent); color:#fff;
+    animation:mic-pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes mic-pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(232,112,58,0.45);}
+    50%{box-shadow:0 0 0 8px rgba(232,112,58,0);}
+  }
+  .voice-hint{
+    display:none; text-align:center; font-size:11.5px; color:var(--accent);
+    font-weight:600; padding-top:8px;
+  }
+  .voice-hint.show{display:block;}
+  .send-btn{
+    width:34px;height:34px;border-radius:9px; background:var(--brand); border:none; color:#fff;
+    display:flex; align-items:center;justify-content:center; cursor:pointer; flex-shrink:0;
+  }
+
+  /* Einstellungen */
+  .settings-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:15px 2px; border-bottom:1px solid var(--line);
+  }
+  .settings-row:last-child{border-bottom:none;}
+  .settings-label{font-weight:600; font-size:13px;}
+  .settings-desc{font-size:12px; color:var(--ink-mute); margin-top:2px;}
+  .toggle{
+    width:38px; height:22px; border-radius:20px; background:var(--surface-sunken);
+    border:1px solid var(--line-strong); position:relative; cursor:pointer; flex-shrink:0;
+  }
+  .toggle.on{background:var(--brand); border-color:var(--brand);}
+  .toggle::after{
+    content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+    background:#fff; transition:transform .15s ease; box-shadow:0 1px 2px rgba(0,0,0,0.25);
+  }
+  .toggle.on::after{transform:translateX(16px);}
+  .select-mini{
+    padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface);
+    font-size:12.5px; font-weight:600; color:var(--ink);
+  }
+  .conn-status{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;}
+  .conn-dot{width:7px;height:7px;border-radius:50%;}
+  .conn-dot.off{background:var(--ink-mute);}
+  .conn-dot.on{background:var(--ok);}
+
+  .safety-item{display:flex; align-items:center; gap:10px; padding:9px 0; font-size:12.8px;}
+  .safety-lock{
+    width:26px;height:26px;border-radius:7px; background:var(--crit-soft); color:var(--crit);
+    display:flex;align-items:center;justify-content:center; flex-shrink:0;
+  }
+
+  .banner{
+    display:flex; align-items:center; gap:10px; background:var(--accent-soft); border:1px solid #ecd2ac;
+    color:#7a4d15; padding:10px 14px; border-radius:10px; font-size:12.5px; font-weight:600; margin-bottom:18px;
+  }
+
+  /* Empty state */
+  .empty{padding:32px 12px; text-align:center; color:var(--ink-mute);}
+  .empty svg{margin-bottom:8px; opacity:0.5;}
+  .empty-title{font-weight:600; color:var(--ink-soft); font-size:13px;}
+  .empty-sub{font-size:12px; margin-top:3px;}
+
+  /* Scrollbars */
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:20px;}
+  .nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1080px){
+    .grid-4{grid-template-columns:repeat(2,1fr);}
+    .grid-3{grid-template-columns:1fr;}
+    .task-cols{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width: 720px){
+    .sidebar{
+      position:fixed; z-index:100; left:0; top:0; transform:translateX(-100%);
+      transition:transform .22s ease; box-shadow:var(--shadow-pop); width:250px;
+    }
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-close{
+      display:flex; margin-left:auto; background:rgba(255,255,255,0.1); border:none; color:#fff;
+      width:26px;height:26px;border-radius:7px; align-items:center;justify-content:center;cursor:pointer;
+    }
+    .hamburger{display:flex;}
+    .grid-4{grid-template-columns:1fr 1fr;}
+    .grid-2{grid-template-columns:1fr;}
+    .task-cols{grid-template-columns:1fr;}
+    .content{padding:16px 14px 50px;}
+    .topbar{padding:12px 14px;}
+    .topbar-date{display:none;}
+    .search{max-width:none;}
+    .mandant-stats{grid-template-columns:1fr 1fr;}
+    table thead{display:none;}
+    tbody tr{display:flex; flex-direction:column; padding:10px 0;}
+    tbody td{padding:3px 4px; border-bottom:none;}
+    .scrim{display:block;}
+  }
+  .scrim{
+    display:none; position:fixed; inset:0; background:rgba(10,14,12,0.4); z-index:90;
+  }
+  .scrim.show{display:block;}
+
+  /* ---------- Anhang-Workflow ---------- */
+  .wf-steps{display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;}
+  .wf-step{
+    display:flex; align-items:center; gap:8px; padding:9px 14px;
+    border-radius:9px; border:1px solid var(--line); background:var(--surface);
+    font-size:12.5px; font-weight:600; color:var(--ink-mute); cursor:pointer;
+  }
+  .wf-step.active{border-color:var(--accent); color:var(--ink); background:var(--accent-soft);}
+  .wf-step-num{
+    width:20px; height:20px; border-radius:50%; background:var(--surface-sunken);
+    color:var(--ink-mute); display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; flex-shrink:0;
+  }
+  .wf-step.active .wf-step-num{background:var(--accent); color:#fff;}
+  .wf-pane{display:none;}
+  .wf-pane.active{display:block; animation:fade .2s ease;}
+
+  .wf-email-head{display:flex; align-items:center; gap:10px;}
+  .wf-attach-chip{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; margin-top:16px;
+    border:1px dashed var(--line-strong); border-radius:10px; background:var(--surface-sunken);
+    cursor:pointer;
+  }
+  .wf-attach-chip:hover{border-color:var(--accent);}
+  .wf-notif{
+    border:1px solid var(--line); border-radius:10px; padding:12px; background:var(--surface-sunken);
+  }
+
+  .wf-pdf-mock{
+    background:var(--surface-sunken); border:1px solid var(--line); border-radius:10px;
+    padding:20px; min-height:220px;
+  }
+  .wf-pdf-page{
+    background:#fff; border:1px solid var(--line); border-radius:6px; padding:18px;
+    box-shadow:0 2px 8px rgba(36,29,23,0.08);
+  }
+  .wf-pdf-line{height:8px; background:var(--surface-sunken); border-radius:4px; margin-bottom:10px;}
+  .wf-pdf-field{
+    font-size:12px; color:var(--ink-soft); background:var(--surface-sunken);
+    border-radius:6px; padding:8px 10px; margin:10px 0;
+  }
+  .wf-pdf-field.wf-flagged{background:var(--crit-soft);}
+  .wf-fillable{font-weight:700; color:var(--ink); background:var(--accent-soft); padding:1px 6px; border-radius:4px;}
+  .wf-fillable.wf-empty{background:var(--crit-soft); color:var(--crit);}
+  .wf-toolbar{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+  .wf-voice-example{
+    font-size:14px; font-style:italic; color:var(--accent); font-weight:600;
+    background:var(--accent-soft); border-radius:8px; padding:12px 14px;
+  }
+  .wf-checklist{display:flex; flex-direction:column; gap:10px;}
+  .wf-check-item{
+    display:flex; align-items:center; gap:8px; font-size:12.8px; font-weight:600;
+    color:var(--ink-mute);
+  }
+  .wf-check-item.done{color:var(--ok);}
+  .wf-mail-draft{
+    font-size:12.8px; line-height:1.7; color:var(--ink); background:var(--surface-sunken);
+    border-radius:10px; padding:14px;
+  }
+
+  /* ---------- Beleg-Workflow ---------- */
+  .beleg-quelle{display:flex; align-items:center; gap:7px; font-weight:600; font-size:12px; color:var(--ink-soft);}
+  .beleg-quelle-icon{
+    width:24px; height:24px; border-radius:7px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--surface-sunken); color:var(--ink-soft);
+  }
+  .beleg-quelle-icon.mail{background:#e9e3fb; color:#5b3fc4;}
+  .beleg-quelle-icon.whatsapp{background:var(--ok-soft); color:var(--ok);}
+  .beleg-quelle-icon.kamera{background:var(--accent-soft); color:var(--accent);}
+  .beleg-hinweis{font-size:11px; color:var(--ink-mute); margin-top:2px;}
+  .beleg-zuordnen{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .beleg-form{display:flex; flex-direction:column; gap:10px;}
+  .beleg-form input[type="file"]{
+    font-size:12px; color:var(--ink-soft); padding:8px; border:1px dashed var(--line-strong);
+    border-radius:8px; background:var(--surface-sunken);
+  }
+  .beleg-form select, .beleg-form textarea{
+    padding:8px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface);
+    font-size:12.5px; font-family:inherit; color:var(--ink); width:100%;
+  }
+  .beleg-form textarea{min-height:56px; resize:vertical;}
+  .ordner-card{padding:15px 15px 13px;}
+  .ordner-top{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .ordner-icon{
+    width:34px; height:34px; border-radius:9px; background:var(--accent-soft); color:var(--accent);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .ordner-name{font-weight:700; font-size:13px;}
+  .ordner-nr{font-size:11px; color:var(--ink-mute); font-family:'IBM Plex Mono';}
+  .ordner-stats{display:flex; gap:8px; margin:10px 0;}
+  .ordner-stat{background:var(--surface-sunken); border-radius:8px; padding:7px 10px; flex:1; text-align:center;}
+  .ordner-stat-val{font-family:'Sora'; font-weight:700; font-size:15px;}
+  .ordner-stat-lbl{font-size:9.5px; color:var(--ink-mute); text-transform:uppercase; letter-spacing:0.03em;}
+
+  /* ---------- Toasts ---------- */
+  .toast-wrap{
+    position:fixed; bottom:20px; right:20px; z-index:300;
+    display:flex; flex-direction:column; gap:8px; max-width:320px;
+  }
+  .toast{
+    background:var(--brand); color:#fff; padding:11px 15px; border-radius:10px;
+    font-size:12.5px; font-weight:600; box-shadow:var(--shadow-pop); animation:fade .2s ease;
+    transition:opacity .3s ease;
+  }
+  @media (max-width: 720px){
+    .toast-wrap{left:14px; right:14px; bottom:14px; max-width:none;}
+  }
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="scrim" id="scrim" onclick="toggleSidebar(false)"></div>
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">KP</div>
+      <div>
+        <div class="brand-name">Kanzlei Pilot</div>
+        <div class="brand-sub">KI-Büroassistent · Beta</div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar(false)" aria-label="Menü schließen">✕</button>
+    </div>
+
+    <nav class="nav" aria-label="Hauptnavigation">
+      <button class="nav-item active" data-view="heute" onclick="showView('heute', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+        Heute
+      </button>
+      <button class="nav-item" data-view="emails" onclick="showView('emails', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+        E-Mails
+        <span class="nav-badge crit">12</span>
+      </button>
+      <button class="nav-item" data-view="mandanten" onclick="showView('mandanten', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Mandanten
+      </button>
+      <button class="nav-item" data-view="kalender" onclick="showView('kalender', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+        Kalender
+      </button>
+      <button class="nav-item" data-view="aufgaben" onclick="showView('aufgaben', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Aufgaben
+        <span class="nav-badge">7</span>
+      </button>
+      <button class="nav-item" data-view="fristen" onclick="showView('fristen', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Fristen
+        <span class="nav-badge crit">3</span>
+      </button>
+
+      <div class="nav-section-label">Intelligenz</div>
+      <button class="nav-item" data-view="workflow" onclick="showView('workflow', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        Anhang-Workflow
+      </button>
+      <button class="nav-item" data-view="belege" onclick="showView('belege', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Beleg-Workflow
+        <span class="nav-badge">Neu</span>
+      </button>
+      <button class="nav-item" data-view="ki" onclick="showView('ki', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M9 13v2M15 13v2"/></svg>
+        KI-Assistent
+      </button>
+      <button class="nav-item" data-view="einstellungen" onclick="showView('einstellungen', this)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Einstellungen
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="avatar">KM</div>
+      <div>
+        <div class="sidebar-foot-name">Kavin Manoharan</div>
+        <div class="sidebar-foot-role">Clever Dreams Consulting</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="hamburger" onclick="toggleSidebar(true)" aria-label="Menü öffnen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Mandant, E-Mail oder Frist suchen …" aria-label="Suche">
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date mono" id="todayLabel"></span>
+        <button class="icon-btn" aria-label="Benachrichtigungen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="dot-alert"></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ============ VIEW: HEUTE ============ -->
+      <section class="view active" id="view-heute">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Guten Morgen, Kavin 👋</h1>
+            <p class="page-sub">Donnerstag, 28. August — hier ist dein Überblick für heute.</p>
+          </div>
+          <button class="btn btn-primary" onclick="showView('ki', document.querySelector('[data-view=ki]'))">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/></svg>
+            Morgenbericht ansehen
+          </button>
+        </div>
+
+        <div class="grid grid-4" style="margin-bottom:16px;">
+          <div class="card kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--ok-soft);color:var(--ok);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value">14</div>
+            <div class="kpi-label">Neue E-Mails</div>
+            <div class="kpi-trend" style="color:var(--crit);">3 davon dringend</div>
+          </div>
+          <div class="card kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--accent-soft);color:var(--accent);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value">7</div>
+            <div class="kpi-label">Offene Aufgaben</div>
+            <div class="kpi-trend" style="color:var(--warn);">2 überfällig</div>
+          </div>
+          <div class="card kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--accent-soft);color:var(--accent);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value">2</div>
+            <div class="kpi-label">Termine heute</div>
+            <div class="kpi-trend" style="color:var(--ink-mute);">nächster um 11:00</div>
+          </div>
+          <div class="card kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:var(--crit-soft);color:var(--crit);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value">3</div>
+            <div class="kpi-label">Kritische Fristen</div>
+            <div class="kpi-trend" style="color:var(--crit);">früheste in 2 Tagen</div>
+          </div>
+        </div>
+
+        <div class="grid grid-3" style="align-items:start;">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+
+            <div class="card card-pad">
+              <div class="card-head">
+                <div class="card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+                  Wichtige E-Mails
+                </div>
+                <button class="card-link" onclick="showView('emails', document.querySelector('[data-view=emails]'))">Alle ansehen →</button>
+              </div>
+              <div class="row-list" id="heuteEmailList"></div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="card-head">
+                <div class="card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  Bevorstehende Fristen
+                </div>
+                <button class="card-link" onclick="showView('fristen', document.querySelector('[data-view=fristen]'))">Alle ansehen →</button>
+              </div>
+              <div class="row-list" id="heuteFristList"></div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="ai-card">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/></svg>
+                <span style="font-weight:700; font-size:13px;">KI-Empfehlungen</span>
+              </div>
+              <p style="font-size:11.8px; color:rgba(255,255,255,0.65); margin:4px 0 4px;">Vorschläge — du bestätigst jede Aktion selbst.</p>
+              <div id="aiRecoList"></div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="card-head">
+                <div class="card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+                  Heutige Termine
+                </div>
+              </div>
+              <div class="row-list" id="heuteTerminList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: E-MAILS ============ -->
+      <section class="view" id="view-emails">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">E-Mails</h1>
+            <p class="page-sub">14 neue Nachrichten · automatisch nach Mandant, Fachbereich und Priorität sortiert</p>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <button class="chip active">Alle (14)</button>
+          <button class="chip">Hoch (3)</button>
+          <button class="chip">Antwort nötig (7)</button>
+          <button class="chip">Unterlagen fehlen (2)</button>
+          <button class="chip">Finanzamt</button>
+        </div>
+        <p style="font-size:11.5px; color:var(--ink-mute); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 8px;">Fachbereich (bei mehreren Postfächern, z. B. Clever Dreams)</p>
+        <div class="filter-bar">
+          <button class="chip active">Alle Bereiche</button>
+          <button class="chip">Buchhaltung (10)</button>
+          <button class="chip">Webdesign (2)</button>
+          <button class="chip">Marketing (2)</button>
+          <button class="chip">Beratung (1)</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead>
+              <tr><th>Absender</th><th>Mandant</th><th>Betreff</th><th>Kategorie</th><th>Fachbereich</th><th>Frist</th><th>Priorität</th><th>Status</th></tr>
+            </thead>
+            <tbody id="emailTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: MANDANTEN ============ -->
+      <section class="view" id="view-mandanten">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Mandanten</h1>
+            <p class="page-sub">9 aktive Mandate · sortiert nach nächster Frist</p>
+          </div>
+          <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Mandant hinzufügen</button>
+        </div>
+        <div class="grid grid-4" id="mandantenGrid"></div>
+      </section>
+
+      <!-- ============ VIEW: KALENDER ============ -->
+      <section class="view" id="view-kalender">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Kalender</h1>
+            <p class="page-sub">Termine aus Outlook + von der KI aus E-Mails erkannte Vorschläge</p>
+          </div>
+        </div>
+        <div class="grid grid-3" style="align-items:start;">
+          <div class="card card-pad">
+            <div class="card-head"><div class="card-title">Diese Woche</div></div>
+            <div id="calList"></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card card-pad">
+              <div class="card-head"><div class="card-title">August 2026</div></div>
+              <div class="mini-cal" id="miniCal"></div>
+            </div>
+            <div class="card card-pad">
+              <div class="card-head">
+                <div class="card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/></svg>
+                  Von KI erkannt
+                </div>
+              </div>
+              <p style="font-size:12px; color:var(--ink-mute); margin:0 0 10px;">Aus E-Mails vorgeschlagen — noch nicht in Outlook eingetragen.</p>
+              <div class="cal-event ki" style="margin-bottom:8px;">
+                <div class="cal-event-title">Rückruf Finanzamt Dortmund</div>
+                <div class="cal-event-meta">Erkannt in E-Mail von Frau Gunderz · morgen, 09:30</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" style="flex:1; justify-content:center;">Übernehmen</button>
+                <button class="btn" style="flex:1; justify-content:center;">Verwerfen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: AUFGABEN ============ -->
+      <section class="view" id="view-aufgaben">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Aufgaben</h1>
+            <p class="page-sub">7 offen · 2 überfällig</p>
+          </div>
+          <button class="btn btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Neue Aufgabe</button>
+        </div>
+        <div class="task-cols" id="taskCols"></div>
+      </section>
+
+      <!-- ============ VIEW: FRISTEN ============ -->
+      <section class="view" id="view-fristen">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Fristen</h1>
+            <p class="page-sub">Steuertermine, Einsprüche und Zahlungsfristen im Blick</p>
+          </div>
+        </div>
+        <div class="banner">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7a4d15" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          3 Fristen benötigen in den nächsten 5 Tagen eine Entscheidung.
+        </div>
+        <div class="card card-pad">
+          <div id="fristList"></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: ANHANG-WORKFLOW ============ -->
+      <section class="view" id="view-workflow">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Anhang-Workflow</h1>
+            <p class="page-sub">Beispielablauf: E-Mail &rarr; Anhang pr&uuml;fen &amp; ausf&uuml;llen &rarr; Antwort vorbereiten &rarr; senden &middot; alles Mock-up, noch keine echte Anbindung</p>
+          </div>
+        </div>
+
+        <div class="wf-steps">
+          <div class="wf-step active" data-step="1" onclick="wfGoto(1)"><span class="wf-step-num">A</span>E-Mail &amp; Notification</div>
+          <div class="wf-step" data-step="2" onclick="wfGoto(2)"><span class="wf-step-num">B</span>Anhang pr&uuml;fen</div>
+          <div class="wf-step" data-step="3" onclick="wfGoto(3)"><span class="wf-step-num">C</span>Anhang ausf&uuml;llen</div>
+          <div class="wf-step" data-step="4" onclick="wfGoto(4)"><span class="wf-step-num">D</span>Antwort &amp; Versand</div>
+        </div>
+
+        <!-- Schritt A -->
+        <div class="wf-pane active" id="wf-pane-1">
+          <div class="grid grid-3">
+            <div class="card card-pad">
+              <div class="card-title" style="margin-bottom:12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>
+                Eingehende E-Mail
+              </div>
+              <div class="wf-email-head">
+                <div class="avatar" style="background:var(--accent-soft);color:var(--accent);">FA</div>
+                <div>
+                  <div style="font-weight:700; font-size:13.5px;">finanzamt-dortmund@fin-nrw.de</div>
+                  <div style="font-size:11.5px; color:var(--ink-mute);">an buchhaltung@clever-dreams.de &middot; heute, 09:14 Uhr</div>
+                </div>
+              </div>
+              <div style="font-weight:700; margin:14px 0 6px;">Fristsetzung Einspruch USt-Bescheid 2024 &ndash; Yilmaz Getr&auml;nkemarkt</div>
+              <p style="font-size:13px; color:var(--ink-soft); line-height:1.6;">Sehr geehrte Damen und Herren, im Anhang erhalten Sie den Bescheid sowie das Formular zur Stellungnahme. Wir bitten um R&uuml;ckmeldung innerhalb der gesetzten Frist. Mit freundlichen Gr&uuml;&szlig;en, Finanzamt Dortmund.</p>
+              <div class="wf-attach-chip" onclick="wfGoto(2)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:12.5px;">Stellungnahme_USt2024.pdf</div>
+                  <div style="font-size:11px; color:var(--ink-mute);">2 Seiten &middot; 340 KB</div>
+                </div>
+                <span class="pill pill-warn">Ausf&uuml;llen n&ouml;tig</span>
+              </div>
+            </div>
+            <div class="card card-pad">
+              <div class="card-title" style="margin-bottom:12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                Verkn&uuml;pfte Benachrichtigung
+              </div>
+              <div class="wf-notif">
+                <span class="pill pill-crit" style="margin-bottom:8px;">Frist in 2 Tagen</span>
+                <div style="font-weight:700; font-size:13px;">Einspruch USt-Bescheid &ndash; Stellungnahme f&auml;llig</div>
+                <div style="font-size:12px; color:var(--ink-mute); margin-top:4px;">Mandant: Yilmaz Getr&auml;nkemarkt</div>
+                <div style="font-size:12px; color:var(--ink-mute);">Verkn&uuml;pfte Unterlagen: Steuernummer, USt-Bescheid 2024</div>
+              </div>
+              <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:14px;" onclick="wfGoto(2)">Anhang &ouml;ffnen &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schritt B -->
+        <div class="wf-pane" id="wf-pane-2">
+          <div class="grid grid-3">
+            <div class="card card-pad">
+              <div class="card-title" style="margin-bottom:12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                Anhang-Vorschau &middot; Stellungnahme_USt2024.pdf
+              </div>
+              <div class="wf-pdf-mock">
+                <div class="wf-pdf-page">
+                  <div class="wf-pdf-line" style="width:60%;"></div>
+                  <div class="wf-pdf-line" style="width:85%;"></div>
+                  <div class="wf-pdf-line" style="width:40%;"></div>
+                  <div class="wf-pdf-field">Zeile 48 &middot; Steuernummer: <span class="wf-fillable">123/4567/8910</span></div>
+                  <div class="wf-pdf-field wf-flagged">Zeile 51 &middot; Anlage Belegnachweis: <span class="wf-fillable wf-empty">nicht vorhanden</span></div>
+                  <div class="wf-pdf-line" style="width:70%;"></div>
+                  <div class="wf-pdf-line" style="width:55%;"></div>
+                </div>
+              </div>
+              <div class="wf-toolbar">
+                <button class="btn" title="Textfeld ausf&uuml;llen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Ausf&uuml;llen</button>
+                <button class="btn" title="Kommentar / Korrektur"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Anmerkung</button>
+                <button class="btn" title="Digitale Unterschrift"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17s2-1 4 0 4 2 6 0 4-2 4-2M4 21h16"/></svg> Unterschrift</button>
+              </div>
+            </div>
+            <div class="card card-pad">
+              <div class="card-title" style="margin-bottom:12px;">Per Sprachbefehl korrigieren</div>
+              <div class="wf-voice-example">&bdquo;Zeile 51: nicht vorhanden&ldquo;</div>
+              <p style="font-size:12px; color:var(--ink-mute); margin-top:8px;">Der Assistent erkennt die Zeile im Dokument und tr&auml;gt die Anmerkung als Korrektur ein &mdash; sichtbar markiert wie oben bei Zeile 51.</p>
+              <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:16px;" onclick="wfGoto(3)">Weiter zum Ausf&uuml;llen &rarr;</button>
+              <button class="btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="wfGoto(1)">&larr; Zur&uuml;ck zur E-Mail</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schritt C -->
+        <div class="wf-pane" id="wf-pane-3">
+          <div class="card card-pad">
+            <div class="card-title" style="margin-bottom:12px;">Anhang ausf&uuml;llen &middot; alle Felder gepr&uuml;ft</div>
+            <div class="wf-checklist">
+              <div class="wf-check-item done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Zeile 48 &middot; Steuernummer eingetragen</div>
+              <div class="wf-check-item done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Zeile 51 &middot; Anmerkung &bdquo;nicht vorhanden&ldquo; eingetragen</div>
+              <div class="wf-check-item done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Digitale Unterschrift platziert</div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="wfGoto(4)">Antwort-E-Mail vorbereiten &rarr;</button>
+            <button class="btn" style="margin-top:8px;" onclick="wfGoto(2)">&larr; Zur&uuml;ck zum Anhang</button>
+          </div>
+        </div>
+
+        <!-- Schritt D -->
+        <div class="wf-pane" id="wf-pane-4">
+          <div class="grid grid-3">
+            <div class="card card-pad">
+              <div class="card-title" style="margin-bottom:12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+                Antwort-Entwurf
+              </div>
+              <div style="font-size:12px; color:var(--ink-mute); margin-bottom:10px;">An: <strong style="color:var(--ink);">finanzamt-dortmund@fin-nrw.de</strong> &middot; Von: buchhaltung@clever-dreams.de</div>
+              <div style="font-size:12px; color:var(--ink-mute); margin-bottom:10px;">Betreff: <strong style="color:var(--ink);">Re: Fristsetzung Einspruch USt-Bescheid 2024 &ndash; Yilmaz Getr&auml;nkemarkt</strong></div>
+              <div class="wf-mail-draft">Sehr geehrte Damen und Herren,<br><br>vielen Dank f&uuml;r Ihr Schreiben. Bezug nehmend auf Ihre Fristsetzung &uuml;bersenden wir Ihnen anbei die ausgef&uuml;llte Stellungnahme f&uuml;r unseren Mandanten Yilmaz Getr&auml;nkemarkt. Zu Zeile 51 weisen wir darauf hin, dass der angeforderte Belegnachweis derzeit nicht vorliegt und nachgereicht wird.<br><br>Mit freundlichen Gr&uuml;&szlig;en<br>Clever Dreams Consulting</div>
+              <div class="wf-attach-chip" style="margin-top:12px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:12.5px;">Stellungnahme_USt2024_ausgef&uuml;llt.pdf</div>
+                  <div style="font-size:11px; color:var(--ink-mute);">unterschrieben &middot; bereit zum Versand</div>
+                </div>
+                <span class="pill pill-ok">Fertig</span>
+              </div>
+            </div>
+            <div class="card card-pad">
+              <div class="card-title" style="margin-bottom:12px;">Letzte Pr&uuml;fung vor Versand</div>
+              <div class="wf-checklist">
+                <div class="wf-check-item done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Empf&auml;nger korrekt</div>
+                <div class="wf-check-item done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Anhang aktuell &amp; unterschrieben</div>
+                <div class="wf-check-item done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Bezug auf Original-Schreiben vorhanden</div>
+              </div>
+              <button class="btn btn-accent" style="width:100%; justify-content:center; margin-top:16px;" id="wfSendBtn" onclick="wfSend()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+                E-Mail senden
+              </button>
+              <div style="font-size:11px; color:var(--ink-mute); margin-top:8px; text-align:center;">Best&auml;tigung erforderlich &middot; wird nie automatisch verschickt</div>
+              <button class="btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="wfGoto(3)">&larr; Zur&uuml;ck</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: BELEG-WORKFLOW ============ -->
+      <section class="view" id="view-belege">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Beleg-Workflow</h1>
+            <p class="page-sub">Anh&auml;nge automatisch erfassen, pro Mandantennummer ablegen und an die Buchhaltungssoftware &uuml;bergeben &middot; Mock-up, noch keine echte Anbindung</p>
+          </div>
+          <button class="btn btn-primary" onclick="belegPruefeNeueMails()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+            Neue E-Mail-Anh&auml;nge pr&uuml;fen
+          </button>
+        </div>
+
+        <div class="grid grid-4" style="margin-bottom:16px;" id="belegKpis"></div>
+
+        <div class="grid grid-3" style="align-items:start;">
+          <div class="card">
+            <div class="card-pad" style="padding-bottom:4px;">
+              <div class="card-head">
+                <div class="card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  Beleg-Eingang
+                </div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Quelle</th><th>Von / Notiz</th><th>Datei</th><th>Zuordnung</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="belegTableBody"></tbody>
+            </table>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card card-pad">
+              <div class="card-head"><div class="card-title">Manueller Upload (z.&nbsp;B. WhatsApp)</div></div>
+              <p class="page-sub" style="margin:-6px 0 12px;">F&uuml;r Belege aus anderen Quellen &mdash; mit Notiz zur Mandanten-Zuordnung.</p>
+              <form class="beleg-form" onsubmit="belegUploadManuell(event)">
+                <input type="file" accept="image/*,.pdf" id="belegUploadDatei">
+                <select id="belegUploadQuelle">
+                  <option>WhatsApp</option>
+                  <option>E-Mail (manuell weitergeleitet)</option>
+                  <option>Sonstige Quelle</option>
+                </select>
+                <select id="belegUploadMandant" required>
+                  <option value="">Mandant w&auml;hlen &hellip;</option>
+                  <!-- wird per JS befüllt -->
+                </select>
+                <textarea id="belegUploadNotiz" placeholder="Notiz zur Zuordnung, z. B. „Fr&uuml;hst&uuml;ckslieferant, Juli“"></textarea>
+                <button class="btn btn-primary" type="submit" style="justify-content:center;">Hochladen</button>
+              </form>
+            </div>
+
+            <div class="card card-pad">
+              <div class="card-head"><div class="card-title">Foto per Handy-Kamera</div></div>
+              <p class="page-sub" style="margin:-6px 0 12px;">Direkt mit der Kamera aufnehmen &mdash; die Zuordnung erfolgt danach in der Liste.</p>
+              <form class="beleg-form" onsubmit="belegUploadKamera(event)">
+                <input type="file" accept="image/*" capture="environment" id="belegUploadFoto">
+                <button class="btn btn-primary" type="submit" style="justify-content:center;">Foto hochladen</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-pad" style="margin-top:16px;">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Mandanten-Ordner
+            </div>
+          </div>
+          <p class="page-sub" style="margin:-6px 0 12px;">Automatisch pro Mandantennummer angelegt und bef&uuml;llt &mdash; bereit zur &Uuml;bergabe an die Buchhaltungssoftware.</p>
+          <div class="grid grid-4" id="belegOrdnerGrid"></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: KI-ASSISTENT ============ -->
+      <section class="view" id="view-ki">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">KI-Assistent</h1>
+            <p class="page-sub">Fragen zu Mandanten, Fristen und E-Mails — per Text oder Sprache, auf Basis deiner Daten</p>
+          </div>
+          <button class="btn" id="readDashBtn" onclick="readDashboard()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+            Dashboard vorlesen
+          </button>
+        </div>
+        <div class="card card-pad chat-wrap">
+          <div class="chat-scroll" id="chatScroll"></div>
+          <div class="suggestion-row">
+            <button class="suggestion-chip" onclick="askAI('Was ist heute wichtig?')">Was ist heute wichtig?</button>
+            <button class="suggestion-chip" onclick="askAI('Welche Fristen habe ich diese Woche?')">Fristen diese Woche</button>
+            <button class="suggestion-chip" onclick="askAI('Welche Mandanten haben offene Unterlagen?')">Offene Unterlagen</button>
+            <button class="suggestion-chip" onclick="askAI('Lies mir alle Termine vor.')">Termine vorlesen</button>
+            <button class="suggestion-chip" onclick="askAI('Lies den zweiten Termin detailliert vor.')">2. Termin detailliert</button>
+            <button class="suggestion-chip" onclick="askAI('Verschiebe den Termin mit Frau Gunderz auf morgen 14 Uhr.')">Termin verschieben</button>
+            <button class="suggestion-chip" onclick="askAI('Suche die Telefonnummer von Pizzeria Bari-Express.')">Telefonnummer suchen</button>
+            <button class="suggestion-chip" onclick="askAI('Bereite eine E-Mail an Ergün Bau vor, dass ich mich später wegen der Lohnunterlagen melde.')">E-Mail vorbereiten</button>
+          </div>
+          <div class="chat-input-bar">
+            <button class="mic-btn" id="micBtn" aria-label="Spracheingabe" onclick="toggleVoice()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+            </button>
+            <input type="text" id="chatInput" placeholder="Frage an deinen Büroassistenten … oder Mikrofon nutzen" onkeydown="if(event.key==='Enter'){askAI(this.value); this.value='';}">
+            <button class="send-btn" aria-label="Senden" onclick="const i=document.getElementById('chatInput'); askAI(i.value); i.value='';">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+            </button>
+          </div>
+          <div class="voice-hint" id="voiceHint">Mikrofon aktiv — spreche jetzt deine Frage oder Anweisung …</div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: EINSTELLUNGEN ============ -->
+      <section class="view" id="view-einstellungen">
+        <div class="page-head">
+
+          <div>
+            <h1 class="page-title">Einstellungen</h1>
+            <p class="page-sub">Verbindung, KI-Modell, Regeln und Sicherheit</p>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="align-items:start;">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+
+            <div class="card card-pad">
+              <div class="card-head"><div class="card-title">Outlook-Verbindung</div></div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Microsoft 365 / Outlook</div>
+                  <div class="settings-desc">Noch nicht verbunden — wird in der nächsten Phase eingerichtet.</div>
+                </div>
+                <div class="conn-status"><span class="conn-dot off"></span>Nicht verbunden</div>
+              </div>
+              <button class="btn" style="margin-top:6px;" disabled>Verbindung einrichten (später)</button>
+            </div>
+
+            <div class="card card-pad">
+              <div class="card-head"><div class="card-title">KI-Modell</div></div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Aktives Modell</div>
+                  <div class="settings-desc">Austauschbar — ohne die Software neu aufzubauen.</div>
+                </div>
+                <select class="select-mini">
+                  <option>Claude</option>
+                  <option>OpenAI</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Lernfunktion</div>
+                  <div class="settings-desc">Regeln aus deinen Entscheidungen speichern (z. B. „immer Mandant X“).</div>
+                </div>
+                <div class="toggle on"></div>
+              </div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="card-head"><div class="card-title">Benachrichtigungen</div></div>
+              <div class="settings-row">
+                <div><div class="settings-label">Kritische Fristen</div><div class="settings-desc">Sofort benachrichtigen</div></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-label">Morgenbericht</div><div class="settings-desc">Täglich um 7:30 Uhr</div></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-label">Neue E-Mail-Zusammenfassung</div><div class="settings-desc">Alle 2 Stunden</div></div>
+                <div class="toggle"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <div class="card-head">
+              <div class="card-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--crit)" stroke-width="2"><path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Immer bestätigungspflichtig
+              </div>
+            </div>
+            <p style="font-size:12px; color:var(--ink-mute); margin:0 0 6px;">Diese Aktionen führt die KI niemals automatisch aus.</p>
+            <div class="safety-item"><div class="safety-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></div>E-Mail löschen / archivieren / verschieben</div>
+            <div class="safety-item"><div class="safety-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/></svg></div>E-Mail senden oder weiterleiten</div>
+            <div class="safety-item"><div class="safety-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg></div>Kalendertermin endgültig erstellen</div>
+            <div class="safety-item"><div class="safety-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/></svg></div>Wichtige Aufgabe automatisch abschließen</div>
+            <div class="safety-item"><div class="safety-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>Dateien löschen</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+/* ---------------- Mock-Daten ---------------- */
+const mandanten = [
+  {nr:"10142", name:"Pizzeria Bari-Express", branche:"Gastronomie", init:"BE", color:"#c9782f", offeneMails:3, offeneAufgaben:2, naechsteFrist:"USt-VA · 3 Tage", letzterKontakt:"vor 2 Tagen", status:"Aktiv"},
+  {nr:"10098", name:"Ergün Bau GmbH", branche:"Infrastruktur", init:"EB", color:"#a8672e", offeneMails:1, offeneAufgaben:0, naechsteFrist:"Lohnsteuer · 6 Tage", letzterKontakt:"vor 5 Tagen", status:"Aktiv"},
+  {nr:"10175", name:"Studio Glanz Beauty", branche:"Kosmetik", init:"SG", color:"#b5790a", offeneMails:2, offeneAufgaben:1, naechsteFrist:"Steuererklärung · 12 Tage", letzterKontakt:"heute", status:"Aktiv"},
+  {nr:"10056", name:"Bioayur Naturprodukte", branche:"Großhandel", init:"BA", color:"#c4922a", offeneMails:0, offeneAufgaben:1, naechsteFrist:"Zoll-Unterlagen · 9 Tage", letzterKontakt:"vor 1 Tag", status:"Aktiv"},
+  {nr:"10021", name:"Yilmaz Getränkemarkt", branche:"Einzelhandel", init:"YG", color:"#7a5cff", offeneMails:4, offeneAufgaben:2, naechsteFrist:"Einspruch · 2 Tage", letzterKontakt:"vor 3 Tagen", status:"Kritisch"},
+  {nr:"10203", name:"Nordpark Fitness UG", branche:"Dienstleistung", init:"NF", color:"#c94f6a", offeneMails:1, offeneAufgaben:0, naechsteFrist:"Jahresabschluss · 21 Tage", letzterKontakt:"vor 8 Tagen", status:"Aktiv"},
+  {nr:"10119", name:"Café Rheinblick", branche:"Gastronomie", init:"CR", color:"#3a7bd5", offeneMails:2, offeneAufgaben:1, naechsteFrist:"USt-VA · 5 Tage", letzterKontakt:"vor 4 Tagen", status:"Aktiv"},
+  {nr:"10240", name:"Kanzlei Höll-Brendstrup", branche:"Kooperation", init:"HB", color:"#5b6663", offeneMails:0, offeneAufgaben:0, naechsteFrist:"—", letzterKontakt:"vor 12 Tagen", status:"Ruhend"},
+];
+
+const emails = [
+  {absender:"finanzamt-dortmund@fin-nrw.de", mandant:"Yilmaz Getränkemarkt", betreff:"Fristsetzung Einspruch USt-Bescheid 2024", kategorie:"Finanzamt", bereich:"Buchhaltung", frist:"in 2 Tagen", prio:"Hoch", status:"Antwort nötig"},
+  {absender:"f.gunderz@steuerberatung.de", mandant:"Ergün Bau GmbH", betreff:"Bitte um Lohnunterlagen August", kategorie:"Unterlagen", bereich:"Buchhaltung", frist:"in 6 Tagen", prio:"Hoch", status:"Unterlagen fehlen"},
+  {absender:"buchhaltung@bari-express.de", mandant:"Pizzeria Bari-Express", betreff:"Lieferando-Abrechnung Juli unklar", kategorie:"Rückfrage", bereich:"Buchhaltung", frist:"—", prio:"Mittel", status:"Antwort nötig"},
+  {absender:"info@krankenkasse-nrw.de", mandant:"Studio Glanz Beauty", betreff:"Beitragsnachweis fehlt", kategorie:"Krankenkasse", bereich:"Buchhaltung", frist:"in 4 Tagen", prio:"Hoch", status:"Unterlagen fehlen"},
+  {absender:"zoll-service@zoll.de", mandant:"Bioayur Naturprodukte", betreff:"Einfuhrunterlagen Bio-Zertifikat", kategorie:"Zoll", bereich:"Buchhaltung", frist:"in 9 Tagen", prio:"Mittel", status:"In Bearbeitung"},
+  {absender:"reception@nordpark-fitness.de", mandant:"Nordpark Fitness UG", betreff:"Frage zu Kleinunternehmerregelung", kategorie:"Beratung", bereich:"Beratung", frist:"—", prio:"Niedrig", status:"Antwort nötig"},
+  {absender:"gericht-dortmund@nrw.de", mandant:"Yilmaz Getränkemarkt", betreff:"Terminladung mündliche Verhandlung", kategorie:"Gericht", bereich:"Buchhaltung", frist:"in 14 Tagen", prio:"Hoch", status:"Termin erkannt"},
+  {absender:"kontakt@cafe-rheinblick.de", mandant:"Café Rheinblick", betreff:"Neue Kassenbons zum Hochladen", kategorie:"Unterlagen", bereich:"Buchhaltung", frist:"—", prio:"Niedrig", status:"Erledigt"},
+  {absender:"noreply@elster.de", mandant:"Studio Glanz Beauty", betreff:"Eingangsbestätigung USt-VA Juli", kategorie:"Finanzamt", bereich:"Buchhaltung", frist:"—", prio:"Niedrig", status:"Erledigt"},
+  {absender:"partner@hoell-brendstrup.de", mandant:"Kanzlei Höll-Brendstrup", betreff:"Abstimmung gemeinsamer Mandant", kategorie:"Intern", bereich:"Buchhaltung", frist:"—", prio:"Mittel", status:"Antwort nötig"},
+  {absender:"info@clever-dreams.de", mandant:"Atiye Beauty Studio", betreff:"Freigabe neue Startseite gewünscht", kategorie:"Webdesign", bereich:"Webdesign", frist:"in 3 Tagen", prio:"Mittel", status:"Antwort nötig"},
+  {absender:"info@clever-dreams.de", mandant:"YP Infra-Consulting", betreff:"Google-Ads-Kampagne August auswerten", kategorie:"Marketing", bereich:"Marketing", frist:"—", prio:"Niedrig", status:"In Bearbeitung"},
+  {absender:"info@clever-dreams.de", mandant:"harrisonsbakery.nl", betreff:"Hosting-Vertrag verlängern?", kategorie:"Webdesign", bereich:"Webdesign", frist:"in 8 Tagen", prio:"Mittel", status:"Antwort nötig"},
+  {absender:"info@clever-dreams.de", mandant:"Pizzeria La Garage", betreff:"Neue Speisekarte für Social Media", kategorie:"Marketing", bereich:"Marketing", frist:"—", prio:"Niedrig", status:"Entwurf bereit"},
+];
+
+const fristen = [
+  {thema:"Einspruch USt-Bescheid 2024", mandant:"Yilmaz Getränkemarkt", stelle:"Finanzamt Dortmund", datum:"30.08.2026", tage:2, prio:"Hoch", status:"Offen"},
+  {thema:"Lohnsteueranmeldung August", mandant:"Ergün Bau GmbH", stelle:"Finanzamt", datum:"03.09.2026", tage:6, prio:"Hoch", status:"In Bearbeitung"},
+  {thema:"Beitragsnachweis nachreichen", mandant:"Studio Glanz Beauty", stelle:"AOK NRW", datum:"01.09.2026", tage:4, prio:"Hoch", status:"Unterlagen fehlen"},
+  {thema:"USt-Voranmeldung Juli", mandant:"Café Rheinblick", stelle:"Finanzamt", datum:"02.09.2026", tage:5, prio:"Mittel", status:"Entwurf bereit"},
+  {thema:"Zoll-Einfuhrunterlagen", mandant:"Bioayur Naturprodukte", stelle:"Hauptzollamt", datum:"06.09.2026", tage:9, prio:"Mittel", status:"In Bearbeitung"},
+  {thema:"Mündliche Verhandlung", mandant:"Yilmaz Getränkemarkt", stelle:"Finanzgericht Münster", datum:"11.09.2026", tage:14, prio:"Mittel", status:"Termin erkannt"},
+  {thema:"Jahresabschluss 2025", mandant:"Nordpark Fitness UG", stelle:"—", datum:"18.09.2026", tage:21, prio:"Niedrig", status:"Offen"},
+];
+
+const aufgaben = {
+  "Überfällig":[
+    {t:"Bescheid Yilmaz prüfen und Einspruch vorbereiten", m:"Yilmaz Getränkemarkt", tag:"crit"},
+    {t:"Rückfrage Lieferando-Abrechnung klären", m:"Pizzeria Bari-Express", tag:"crit"},
+  ],
+  "Heute":[
+    {t:"Beitragsnachweis bei AOK nachfragen", m:"Studio Glanz Beauty", tag:"warn"},
+    {t:"USt-VA Juli final prüfen", m:"Café Rheinblick", tag:"warn"},
+  ],
+  "Diese Woche":[
+    {t:"Lohnunterlagen von Ergün Bau anfordern", m:"Ergün Bau GmbH", tag:"neutral"},
+    {t:"Zoll-Zertifikat mit Bioayur abstimmen", m:"Bioayur Naturprodukte", tag:"neutral"},
+  ],
+  "Später":[
+    {t:"Jahresabschluss-Termin mit Nordpark vereinbaren", m:"Nordpark Fitness UG", tag:"neutral"},
+  ],
+};
+
+const termine = [
+  {zeit:"09:30", titel:"Telefonat Frau Gunderz — Finanzamt", meta:"Steuerberatung Höll-Brendstrup", ki:false},
+  {zeit:"11:00", titel:"Videocall: Bioayur Zollunterlagen", meta:"mit Herrn Rajan", ki:false},
+  {zeit:"14:00", titel:"Rückruf Finanzamt Dortmund (Vorschlag)", meta:"von KI aus E-Mail erkannt", ki:true},
+];
+
+const aiRecos = [
+  "3 dringende E-Mails brauchen heute eine Antwort — beginne mit Yilmaz Getränkemarkt (Einspruchsfrist in 2 Tagen).",
+  "Studio Glanz Beauty fehlen Unterlagen für die Krankenkasse — Erinnerung senden?",
+  "Ein Termin wurde in einer E-Mail erkannt: Rückruf Finanzamt, morgen 09:30 — zum Kalender hinzufügen?",
+];
+
+/* Beleg-/Ordner-Workflow: Eingangs-Warteschlange für Anhänge aus E-Mail,
+   manuellem Upload (z. B. WhatsApp) und Handy-Kamera.
+   status: "auto" (eindeutig erkannt, ohne Bestätigung zugeordnet) ·
+           "pruefen" (kein eindeutiger Mandantenbezug, Zuordnung nötig) ·
+           "manuell" (beim Upload direkt einem Mandanten zugeordnet) ·
+           "gesendet" (an die Buchhaltungssoftware übergeben) */
+let belegIdCounter = 6;
+const belegeEingang = [
+  {id:1, quelle:"E-Mail", von:"finanzamt-dortmund@fin-nrw.de", datei:"USt-Bescheid_2024_Yilmaz.pdf", hinweis:"Steuernummer 123/4567/8910 im Dokument gefunden — eindeutig Yilmaz Getränkemarkt", mandantNr:"10021", status:"auto", zeit:"heute, 09:14"},
+  {id:2, quelle:"E-Mail", von:"f.gunderz@steuerberatung.de", datei:"Lohnunterlagen_August_ErgünBau.pdf", hinweis:"Mandantenname im Dateinamen eindeutig erkannt", mandantNr:"10098", status:"auto", zeit:"heute, 08:52"},
+  {id:3, quelle:"E-Mail", von:"info@krankenkasse-nrw.de", datei:"Beitragsnachweis_StudioGlanz.pdf", hinweis:"Mandant über Betreff eindeutig zugeordnet", mandantNr:"10175", status:"auto", zeit:"heute, 07:40"},
+  {id:4, quelle:"E-Mail", von:"buchhaltung@bari-express.de", datei:"Abrechnung_Juli_unklar.pdf", hinweis:"Kein eindeutiger Mandantenbezug im Dokument gefunden — bitte prüfen", mandantNr:null, status:"pruefen", zeit:"heute, 10:05"},
+  {id:5, quelle:"WhatsApp", von:"Kavin (Weiterleitung)", datei:"Kassenbon_Fruehstueck.jpg", hinweis:null, notiz:"Für Café Rheinblick, Lieferant Frühstücks-Backwaren", mandantNr:"10119", status:"manuell", zeit:"gestern, 18:22"},
+  {id:6, quelle:"Kamera", von:"Foto vom Handy", datei:"IMG_2026-08-27_Ausgabenbeleg.jpg", hinweis:"Kein Mandant bei Aufnahme ausgewählt — bitte zuordnen", mandantNr:null, status:"pruefen", zeit:"gestern, 19:03"},
+];
+
+/* Pool weiterer Anhänge, die "Neue E-Mail-Anhänge prüfen" simuliert nachlädt */
+const belegNeuPool = [
+  {quelle:"E-Mail", von:"noreply@elster.de", datei:"USt-VA_Juli_CafeRheinblick.pdf", hinweis:"Mandant über Betreff eindeutig zugeordnet", mandantNr:"10119", status:"auto"},
+  {quelle:"E-Mail", von:"zoll-service@zoll.de", datei:"Einfuhrunterlagen_Bioayur.pdf", hinweis:"Mandantenname im Dateinamen eindeutig erkannt", mandantNr:"10056", status:"auto"},
+  {quelle:"E-Mail", von:"kontakt@nordpark-fitness.de", datei:"Rechnung_Geraetewartung.pdf", hinweis:"Kein eindeutiger Mandantenbezug im Dokument gefunden — bitte prüfen", mandantNr:null, status:"pruefen"},
+];
+
+/* ---------------- Rendering ---------------- */
+function prioPillClass(p){
+  if(p==="Hoch") return "pill-hoch";
+  if(p==="Mittel") return "pill-mittel";
+  return "pill-niedrig";
+}
+function initialsColor(name){
+  const colors=["#e8703a","#c4922a","#a8672e","#c05a4e","#8f6bb0","#4f8fa8","#c2a13d"];
+  let h=0; for(const c of name) h+=c.charCodeAt(0);
+  return colors[h%colors.length];
+}
+function initialsOf(name){
+  return name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+}
+
+function renderHeute(){
+  const emailList = document.getElementById('heuteEmailList');
+  emailList.innerHTML = emails.slice(0,4).map(e=>`
+    <div class="list-row">
+      <div class="initials" style="background:${initialsColor(e.mandant)}22; color:${initialsColor(e.mandant)};">${initialsOf(e.mandant)}</div>
+      <div style="flex:1; min-width:0;">
+        <div class="cell-main" style="font-size:12.8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.betreff}</div>
+        <div class="cell-sub">${e.mandant} · ${e.frist!=="—"?"Frist "+e.frist:"keine Frist"}</div>
+      </div>
+      <span class="pill ${prioPillClass(e.prio)}">${e.prio}</span>
+    </div>
+  `).join("");
+
+  const fristList = document.getElementById('heuteFristList');
+  fristList.innerHTML = fristen.slice(0,4).map(f=>`
+    <div class="list-row">
+      <div class="frist-days" style="background:${f.tage<=3?'var(--crit-soft)':f.tage<=7?'var(--warn-soft)':'var(--ok-soft)'}; color:${f.tage<=3?'var(--crit)':f.tage<=7?'var(--warn)':'var(--ok)'};">
+        <span class="n">${f.tage}</span><span class="u">Tage</span>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="cell-main" style="font-size:12.8px;">${f.thema}</div>
+        <div class="cell-sub">${f.mandant} · ${f.stelle}</div>
+      </div>
+      <span class="pill ${prioPillClass(f.prio)}">${f.prio}</span>
+    </div>
+  `).join("");
+
+  document.getElementById('heuteTerminList').innerHTML = termine.map(t=>`
+    <div class="list-row">
+      <div class="mono" style="font-size:11.5px; font-weight:700; color:var(--ink-mute); width:40px;">${t.zeit}</div>
+      <div style="flex:1;">
+        <div class="cell-main" style="font-size:12.8px;">${t.titel}</div>
+        <div class="cell-sub">${t.meta}</div>
+      </div>
+      ${t.ki?'<span class="pill pill-brand">KI</span>':''}
+    </div>
+  `).join("");
+
+  document.getElementById('aiRecoList').innerHTML = aiRecos.map(r=>`
+    <div class="ai-reco"><div class="ai-reco-dot"></div><div>${r}</div></div>
+  `).join("");
+}
+
+function renderEmails(){
+  document.getElementById('emailTableBody').innerHTML = emails.map(e=>`
+    <tr>
+      <td><div class="cell-main">${e.absender}</div></td>
+      <td>${e.mandant}</td>
+      <td><div class="cell-main">${e.betreff}</div></td>
+      <td><span class="pill pill-neutral">${e.kategorie}</span></td>
+      <td><span class="pill pill-bereich">${e.bereich}</span></td>
+      <td style="${e.frist!=='—'?'font-weight:600;':'color:var(--ink-mute);'}">${e.frist}</td>
+      <td><span class="pill ${prioPillClass(e.prio)}">${e.prio}</span></td>
+      <td><span class="pill pill-brand">${e.status}</span></td>
+    </tr>
+  `).join("");
+}
+
+function renderMandanten(){
+  document.getElementById('mandantenGrid').innerHTML = mandanten.map(m=>`
+    <div class="card mandant-card">
+      <div class="mandant-top">
+        <div class="initials" style="width:38px;height:38px;font-size:13px;background:${m.color}22; color:${m.color};">${m.init}</div>
+        <div>
+          <div class="mandant-name">${m.name}</div>
+          <div class="mandant-branche">${m.branche} · Nr. ${m.nr}</div>
+        </div>
+      </div>
+      <div class="mandant-stats">
+        <div class="mstat"><div class="mstat-val">${m.offeneMails}</div><div class="mstat-lbl">Offene E-Mails</div></div>
+        <div class="mstat"><div class="mstat-val">${m.offeneAufgaben}</div><div class="mstat-lbl">Aufgaben</div></div>
+      </div>
+      <div class="mandant-foot">
+        <span>Frist: <strong style="color:var(--ink);">${m.naechsteFrist}</strong></span>
+        <span class="pill ${m.status==='Kritisch'?'pill-hoch':m.status==='Ruhend'?'pill-neutral':'pill-niedrig'}">${m.status}</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderKalender(){
+  document.getElementById('calList').innerHTML = termine.map(t=>`
+    <div class="cal-day">
+      <div class="cal-time">${t.zeit}</div>
+      <div class="cal-event ${t.ki?'ki':''}">
+        <div class="cal-event-title">${t.titel}</div>
+        <div class="cal-event-meta">${t.meta}</div>
+      </div>
+    </div>
+  `).join("") + `
+    <div class="cal-day">
+      <div class="cal-time">Mo</div>
+      <div class="cal-event"><div class="cal-event-title">Quartalsbesprechung Bioayur</div><div class="cal-event-meta">10:00 · vor Ort</div></div>
+    </div>
+    <div class="cal-day">
+      <div class="cal-time">Mi</div>
+      <div class="cal-event"><div class="cal-event-title">Fristablauf Einspruch Yilmaz</div><div class="cal-event-meta">ganztägig</div></div>
+    </div>
+  `;
+
+  const dows=["Mo","Di","Mi","Do","Fr","Sa","So"];
+  let cells = dows.map(d=>`<div class="dow">${d}</div>`).join("");
+  for(let i=1;i<=3;i++) cells+=`<div class="d muted">${29-3+i>28?26+i:29-3+i}</div>`;
+  for(let d=1; d<=31; d++){
+    const isToday = d===28;
+    const hasEvent = [28,31,2,6,9,11,14].includes(d) && d<=31;
+    cells += `<div class="d ${isToday?'today':''} ${hasEvent?'has-event':''}">${d}</div>`;
+  }
+  document.getElementById('miniCal').innerHTML = cells;
+}
+
+function renderAufgaben(){
+  const cols = document.getElementById('taskCols');
+  cols.innerHTML = Object.entries(aufgaben).map(([col, items])=>`
+    <div>
+      <div class="task-col-head">
+        <span class="task-col-title">${col}</span>
+        <span class="task-count">${items.length}</span>
+      </div>
+      ${items.length? items.map(it=>`
+        <div class="task-card ${it.tag==='crit'?'overdue':''}">
+          <div class="task-title">${it.t}</div>
+          <div class="task-meta">
+            <div class="task-check"></div>
+            <span style="font-size:11px; color:var(--ink-mute);">${it.m}</span>
+          </div>
+        </div>
+      `).join("") : `<div class="empty" style="padding:20px 6px;"><div class="empty-sub">Keine Aufgaben</div></div>`}
+    </div>
+  `).join("");
+}
+
+function renderFristen(){
+  document.getElementById('fristList').innerHTML = fristen.map(f=>`
+    <div class="frist-row">
+      <div class="frist-days" style="background:${f.tage<=3?'var(--crit-soft)':f.tage<=7?'var(--warn-soft)':'var(--ok-soft)'}; color:${f.tage<=3?'var(--crit)':f.tage<=7?'var(--warn)':'var(--ok)'};">
+        <span class="n">${f.tage}</span><span class="u">Tage</span>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <div class="cell-main" style="font-size:13.5px;">${f.thema}</div>
+        <div class="cell-sub">${f.mandant} · ${f.stelle} · fällig ${f.datum}</div>
+      </div>
+      <span class="pill ${prioPillClass(f.prio)}">${f.prio}</span>
+      <span class="pill pill-neutral">${f.status}</span>
+    </div>
+  `).join("");
+}
+
+/* ---------------- Beleg-/Ordner-Workflow ---------------- */
+function mandantByNr(nr){
+  return mandanten.find(m=>m.nr===nr) || null;
+}
+function belegStatusInfo(status){
+  return {
+    auto:    {klasse:"pill-ok",      label:"Automatisch zugeordnet"},
+    pruefen: {klasse:"pill-warn",    label:"Manuelle Prüfung nötig"},
+    manuell: {klasse:"pill-brand",   label:"Manuell zugeordnet"},
+    gesendet:{klasse:"pill-neutral", label:"An Buchhaltung übergeben"},
+  }[status];
+}
+function belegQuelleIcon(quelle){
+  if(quelle==="E-Mail") return `<div class="beleg-quelle-icon mail"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg></div>`;
+  if(quelle==="WhatsApp") return `<div class="beleg-quelle-icon whatsapp"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>`;
+  return `<div class="beleg-quelle-icon kamera"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`;
+}
+
+function renderBelege(){
+  /* KPI-Kacheln */
+  const counts = {auto:0, pruefen:0, manuell:0, gesendet:0};
+  belegeEingang.forEach(b=>counts[b.status]++);
+  const kpiDefs = [
+    {status:"auto",     bg:"var(--ok-soft)",     color:"var(--ok)"},
+    {status:"pruefen",  bg:"var(--warn-soft)",   color:"var(--warn)"},
+    {status:"manuell",  bg:"var(--accent-soft)", color:"var(--accent)"},
+    {status:"gesendet", bg:"var(--surface-sunken)", color:"var(--ink-soft)"},
+  ];
+  document.getElementById('belegKpis').innerHTML = kpiDefs.map(k=>`
+    <div class="card kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:${k.bg}; color:${k.color};">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value">${counts[k.status]}</div>
+      <div class="kpi-label">${belegStatusInfo(k.status).label}</div>
+    </div>
+  `).join("");
+
+  /* Beleg-Eingang Tabelle */
+  document.getElementById('belegTableBody').innerHTML = belegeEingang.map(b=>{
+    const mandant = mandantByNr(b.mandantNr);
+    const info = belegStatusInfo(b.status);
+    let zuordnung;
+    if(mandant){
+      zuordnung = `<div class="cell-main">${mandant.name}</div><div class="cell-sub">Nr. ${mandant.nr}</div>`;
+    } else if(b.status==="pruefen"){
+      zuordnung = `
+        <div class="beleg-zuordnen">
+          <select class="select-mini" id="belegSelect-${b.id}">
+            <option value="">Mandant wählen …</option>
+            ${mandanten.map(m=>`<option value="${m.nr}">${m.nr} · ${m.name}</option>`).join("")}
+          </select>
+          <button class="btn" onclick="belegManuellZuordnen(${b.id})">Zuordnen</button>
+        </div>`;
+    } else {
+      zuordnung = `<span class="cell-sub">—</span>`;
+    }
+    return `
+      <tr>
+        <td><div class="beleg-quelle">${belegQuelleIcon(b.quelle)}${b.quelle}</div></td>
+        <td>
+          <div class="cell-main">${b.von}</div>
+          ${b.notiz ? `<div class="beleg-hinweis">„${b.notiz}“</div>` : b.hinweis ? `<div class="beleg-hinweis">${b.hinweis}</div>` : ""}
+        </td>
+        <td><div class="cell-main mono" style="font-weight:600; font-size:11.8px;">${b.datei}</div><div class="cell-sub">${b.zeit}</div></td>
+        <td>${zuordnung}</td>
+        <td><span class="pill ${info.klasse}">${info.label}</span></td>
+        <td></td>
+      </tr>`;
+  }).join("");
+
+  /* Mandanten-Ordner */
+  const ordnerMandanten = mandanten.filter(m=>belegeEingang.some(b=>b.mandantNr===m.nr));
+  document.getElementById('belegOrdnerGrid').innerHTML = ordnerMandanten.length ? ordnerMandanten.map(m=>{
+    const belegeDesMandanten = belegeEingang.filter(b=>b.mandantNr===m.nr);
+    const offen = belegeDesMandanten.filter(b=>b.status==="auto" || b.status==="manuell").length;
+    const gesendet = belegeDesMandanten.filter(b=>b.status==="gesendet").length;
+    return `
+      <div class="card ordner-card">
+        <div class="ordner-top">
+          <div class="ordner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div>
+            <div class="ordner-name">${m.name}</div>
+            <div class="ordner-nr">Nr. ${m.nr}</div>
+          </div>
+        </div>
+        <div class="ordner-stats">
+          <div class="ordner-stat"><div class="ordner-stat-val">${offen}</div><div class="ordner-stat-lbl">Bereit</div></div>
+          <div class="ordner-stat"><div class="ordner-stat-val">${gesendet}</div><div class="ordner-stat-lbl">Übergeben</div></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" ${offen?"":"disabled"} onclick="belegSendenAnSoftware('${m.nr}')">An Buchhaltungssoftware übergeben</button>
+      </div>`;
+  }).join("") : `<div class="empty"><div class="empty-title">Noch keine Ordner</div><div class="empty-sub">Sobald Belege einem Mandanten zugeordnet sind, entsteht hier automatisch ein Ordner.</div></div>`;
+}
+
+function belegManuellZuordnen(id){
+  const select = document.getElementById('belegSelect-'+id);
+  const nr = select ? select.value : "";
+  if(!nr){ showToast("Bitte zuerst einen Mandanten auswählen."); return; }
+  const beleg = belegeEingang.find(b=>b.id===id);
+  if(!beleg) return;
+  beleg.mandantNr = nr;
+  beleg.status = "manuell";
+  renderBelege();
+  const mandant = mandantByNr(nr);
+  showToast(`„${beleg.datei}“ wurde ${mandant ? mandant.name : "dem Mandanten"} zugeordnet.`);
+}
+
+function belegSendenAnSoftware(nr){
+  const bereit = belegeEingang.filter(b=>b.mandantNr===nr && (b.status==="auto" || b.status==="manuell"));
+  if(!bereit.length) return;
+  bereit.forEach(b=>b.status="gesendet");
+  renderBelege();
+  const mandant = mandantByNr(nr);
+  showToast(`${bereit.length} Beleg(e) für ${mandant ? mandant.name : "Mandant "+nr} an die Buchhaltungssoftware übergeben.`);
+}
+
+function belegPruefeNeueMails(){
+  const neu = belegNeuPool[Math.floor(Math.random()*belegNeuPool.length)];
+  belegIdCounter++;
+  belegeEingang.unshift({...neu, id:belegIdCounter, zeit:"gerade eben"});
+  renderBelege();
+  showToast(neu.status==="auto" ? "1 neuer Anhang gefunden — automatisch zugeordnet." : "1 neuer Anhang gefunden — Zuordnung nötig.");
+}
+
+function belegUploadManuell(event){
+  event.preventDefault();
+  const quelle = document.getElementById('belegUploadQuelle').value;
+  const mandantNr = document.getElementById('belegUploadMandant').value;
+  const notiz = document.getElementById('belegUploadNotiz').value.trim();
+  const dateiInput = document.getElementById('belegUploadDatei');
+  if(!mandantNr){ showToast("Bitte einen Mandanten für die Zuordnung auswählen."); return; }
+  const datei = (dateiInput.files && dateiInput.files[0]) ? dateiInput.files[0].name : "Beleg_" + Date.now() + ".jpg";
+  belegIdCounter++;
+  belegeEingang.unshift({id:belegIdCounter, quelle: quelle.startsWith("WhatsApp")?"WhatsApp":"E-Mail", von:"Manueller Upload", datei, hinweis:null, notiz: notiz || null, mandantNr, status:"manuell", zeit:"gerade eben"});
+  renderBelege();
+  const mandant = mandantByNr(mandantNr);
+  showToast(`Beleg hochgeladen und ${mandant ? mandant.name : "Mandant"} zugeordnet.`);
+  event.target.reset();
+}
+
+function belegUploadKamera(event){
+  event.preventDefault();
+  const fotoInput = document.getElementById('belegUploadFoto');
+  const datei = (fotoInput.files && fotoInput.files[0]) ? fotoInput.files[0].name : "Foto_" + Date.now() + ".jpg";
+  belegIdCounter++;
+  belegeEingang.unshift({id:belegIdCounter, quelle:"Kamera", von:"Foto vom Handy", datei, hinweis:"Kein Mandant bei Aufnahme ausgewählt — bitte zuordnen", mandantNr:null, status:"pruefen", zeit:"gerade eben"});
+  renderBelege();
+  showToast("Foto hochgeladen — bitte in der Liste einem Mandanten zuordnen.");
+  event.target.reset();
+}
+
+function populateBelegMandantSelect(){
+  const select = document.getElementById('belegUploadMandant');
+  if(!select) return;
+  select.innerHTML = `<option value="">Mandant wählen …</option>` +
+    mandanten.map(m=>`<option value="${m.nr}">${m.nr} · ${m.name}</option>`).join("");
+}
+
+function showToast(msg){
+  const wrap = document.getElementById('toastWrap');
+  if(!wrap) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{
+    el.style.opacity = '0';
+    setTimeout(()=>el.remove(), 300);
+  }, 3200);
+}
+
+/* ---------------- KI-Assistent Chat ---------------- */
+const aiResponses = {
+  "was ist heute wichtig?": `<p>Heute stehen <strong>3 dringende E-Mails</strong>, <strong>2 Termine</strong> und <strong>1 kritische Frist</strong> an.</p><ul><li>Einspruch Yilmaz Getränkemarkt — Frist in 2 Tagen</li><li>Telefonat mit Frau Gunderz um 09:30</li><li>Beitragsnachweis Studio Glanz Beauty fehlt noch</li></ul>`,
+  "welche fristen habe ich diese woche?": `<p>Diese Woche laufen <strong>3 Fristen</strong> ab:</p><ul><li>Einspruch USt-Bescheid — Yilmaz Getränkemarkt (2 Tage)</li><li>Lohnsteueranmeldung — Ergün Bau GmbH (6 Tage)</li><li>Beitragsnachweis — Studio Glanz Beauty (4 Tage)</li></ul>`,
+  "welche mandanten haben offene unterlagen?": `<p><strong>2 Mandanten</strong> warten aktuell auf fehlende Unterlagen:</p><ul><li>Studio Glanz Beauty — Beitragsnachweis für die Krankenkasse</li><li>Ergün Bau GmbH — Lohnunterlagen August</li></ul>`,
+  "zeige mir alle e-mails vom finanzamt.": `<p><strong>2 E-Mails</strong> vom Finanzamt sind offen:</p><ul><li>Fristsetzung Einspruch USt-Bescheid 2024 — Yilmaz Getränkemarkt</li><li>Eingangsbestätigung USt-VA Juli — Studio Glanz Beauty (erledigt)</li></ul>`,
+  "lies mir alle termine vor.": `<p>Klar, ich lese vor:</p><ol><li>09:30 — Telefonat mit Frau Gunderz</li><li>11:00 — USt-VA Abgabe Café Rheinblick (intern)</li><li>14:00 — Vorschlag der KI: Rückruf Nordpark Fitness UG</li></ol><p style="color:var(--ink-mute); font-size:12px;">Frag gern gezielt nach, z. B. „lies den zweiten Termin detailliert“.</p>`,
+  "verschiebe den termin mit frau gunderz auf morgen 14 uhr.": `<p>Termin <strong>„Telefonat mit Frau Gunderz“</strong> wurde probeweise auf <strong>morgen, 14:00 Uhr</strong> verschoben.</p><p style="color:var(--ink-mute); font-size:12px;">In der echten Version brauche ich hierfür deine Bestätigung, bevor der Kalendereintrag final geändert wird.</p>`,
+  "suche die telefonnummer von pizzeria bari-express.": `<p>Pizzeria Bari-Express — hinterlegte Telefonnummer:</p><p style="font-weight:700;">0231 55 89 41</p><p style="color:var(--ink-mute); font-size:12px;">Quelle: Mandantenakte (Mock-Daten)</p>`,
+  "bereite eine e-mail an ergün bau vor, dass ich mich später wegen der lohnunterlagen melde.": `<p>Entwurf vorbereitet — An: <strong>Ergün Bau GmbH</strong></p><div class="wf-mail-draft" style="margin-top:8px;">Sehr geehrter Herr Ergün,<br><br>vielen Dank für Ihre Nachricht. Ich melde mich in Kürze bei Ihnen bezüglich der Lohnunterlagen August.<br><br>Mit freundlichen Grüßen<br>Kavin Manoharan</div><p style="color:var(--ink-mute); font-size:12px; margin-top:8px;">Liegt als Entwurf bereit — wird erst nach deiner Freigabe verschickt.</p>`,
+};
+
+const terminDetails = [
+  { titel:"Telefonat mit Frau Gunderz", zeit:"09:30 – 09:50 Uhr", mandant:"—", thema:"Abstimmung zu offenen Steuerunterlagen und Rückfragen zur laufenden Buchhaltung", ort:"Telefon", vorbereitung:"Letzte E-Mail von Frau Gunderz noch einmal prüfen" },
+  { titel:"USt-VA Abgabe Café Rheinblick", zeit:"11:00 – 11:30 Uhr", mandant:"Café Rheinblick", thema:"Interne Erledigung: Umsatzsteuervoranmeldung Juli fertigstellen und über ELSTER übermitteln", ort:"Büro", vorbereitung:"Kassenbons vollständig? Bereits hochgeladen laut E-Mail." },
+  { titel:"Vorschlag der KI: Rückruf Nordpark Fitness UG", zeit:"14:00 – 14:15 Uhr", mandant:"Nordpark Fitness UG", thema:"Rückruf zur offenen Frage bezüglich Kleinunternehmerregelung", ort:"Telefon", vorbereitung:"Von der KI vorgeschlagen, noch nicht final im Kalender bestätigt" },
+];
+
+const zahlwoerter = { "ersten":0,"erste":0,"erster":0,"1.":0,"zweiten":1,"zweite":1,"zweiter":1,"2.":1,"dritten":2,"dritte":2,"dritter":2,"3.":2 };
+
+function terminDetailAntwort(idx){
+  const t = terminDetails[idx];
+  if(!t) return null;
+  return `<p><strong>Termin ${idx+1}: ${t.titel}</strong></p><ul>
+    <li>Uhrzeit: ${t.zeit}</li>
+    <li>Mandant: ${t.mandant}</li>
+    <li>Thema: ${t.thema}</li>
+    <li>Ort: ${t.ort}</li>
+    <li>Vorbereitung: ${t.vorbereitung}</li>
+  </ul>`;
+}
+
+const dashboardSummary = "Guten Tag Kavin. Heute stehen drei dringende E-Mails an, zwei Termine, und eine kritische Frist: der Einspruch für Yilmaz Getränkemarkt läuft in zwei Tagen ab. Ergün Bau und Studio Glanz Beauty warten noch auf fehlende Unterlagen.";
+
+function addMsg(role, html){
+  const scroll = document.getElementById('chatScroll');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `
+    <div class="msg-avatar ${role}">${role==='ai'?'KI':'KM'}</div>
+    <div class="msg-bubble">${html}</div>
+  `;
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function speak(text){
+  try{
+    if('speechSynthesis' in window){
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'de-DE';
+      window.speechSynthesis.speak(u);
+    }
+  }catch(e){}
+}
+
+function findTerminDetailFrage(key){
+  if(!key.includes('termin') || !key.includes('detail')) return null;
+  const zahlMatch = key.match(/\\b([1-3])\\b/);
+  if(zahlMatch) return Number(zahlMatch[1]) - 1;
+  for(const wort in zahlwoerter){
+    if(key.includes(wort)) return zahlwoerter[wort];
+  }
+  return null;
+}
+
+function askAI(question){
+  if(!question || !question.trim()) return;
+  addMsg('user', question);
+  const key = question.trim().toLowerCase();
+  const terminIdx = findTerminDetailFrage(key);
+  let response;
+  if(terminIdx !== null && terminDetailAntwort(terminIdx)){
+    response = terminDetailAntwort(terminIdx);
+  } else {
+    response = aiResponses[key] || `<p>Das kann ich später beantworten, sobald ich mit Outlook verbunden bin und echte Mandantendaten sehe. In der Vorschau zeige ich dir Beispielantworten für die Musterfragen und Sprachbefehle unten.</p>`;
+  }
+  setTimeout(()=>{
+    addMsg('ai', response);
+    speak(response.replace(/<[^>]+>/g, ' '));
+  }, 350);
+}
+
+function readDashboard(){
+  addMsg('ai', `<p>🔊 ${dashboardSummary}</p>`);
+  speak(dashboardSummary);
+}
+
+let listening = false;
+function toggleVoice(){
+  const btn = document.getElementById('micBtn');
+  const hint = document.getElementById('voiceHint');
+  const input = document.getElementById('chatInput');
+  if(listening){
+    listening = false;
+    btn.classList.remove('listening');
+    hint.classList.remove('show');
+    return;
+  }
+  listening = true;
+  btn.classList.add('listening');
+  hint.classList.add('show');
+  // Mock: simuliert eine erkannte Spracheingabe, da diese Preview ohne Mikrofon-Zugriff läuft
+  const beispielSaetze = [
+    "Lies mir alle Termine vor.",
+    "Suche die Telefonnummer von Pizzeria Bari-Express.",
+    "Verschiebe den Termin mit Frau Gunderz auf morgen 14 Uhr.",
+  ];
+  const satz = beispielSaetze[Math.floor(Math.random()*beispielSaetze.length)];
+  let i = 0;
+  input.value = '';
+  const typer = setInterval(()=>{
+    input.value += satz[i] || '';
+    i++;
+    if(i >= satz.length){
+      clearInterval(typer);
+      setTimeout(()=>{
+        listening = false;
+        btn.classList.remove('listening');
+        hint.classList.remove('show');
+        askAI(input.value);
+        input.value = '';
+      }, 400);
+    }
+  }, 35);
+}
+
+
+/* ---------------- Nav / Sidebar ---------------- */
+function showView(name, btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  toggleSidebar(false);
+  document.querySelector('.content').scrollTo?.(0,0);
+  window.scrollTo(0,0);
+}
+function wfGoto(step){
+  document.querySelectorAll('.wf-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('wf-pane-'+step).classList.add('active');
+  document.querySelectorAll('.wf-step').forEach(s=>s.classList.toggle('active', Number(s.dataset.step)===step));
+}
+function wfSend(){
+  const btn = document.getElementById('wfSendBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Gesendet';
+  btn.style.background = 'var(--ok)';
+  btn.style.borderColor = 'var(--ok)';
+  btn.style.color = '#fff';
+}
+function toggleSidebar(open){
+  document.getElementById('sidebar').classList.toggle('open', open);
+  document.getElementById('scrim').classList.toggle('show', open);
+}
+
+/* ---------------- Init ---------------- */
+document.getElementById('todayLabel').textContent = 'Do., 28. Aug 2026';
+renderHeute();
+renderEmails();
+renderMandanten();
+renderKalender();
+renderAufgaben();
+renderFristen();
+populateBelegMandantSelect();
+renderBelege();
+addMsg('ai', `<p>Guten Morgen, Kavin. Ich bin dein Büroassistent — frag mich etwas oder nutze einen Vorschlag unten.</p>`);
+</script>
+</body>
+</html>
