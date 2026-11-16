@@ -1,0 +1,21 @@
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Lokale/geheime Dateien niemals hochladen
+.env
+.env.*
+*.local
+.claude/settings.local.json
+
+# Graphify-Ausgabe
+graphify-out/
+
+# Abhängigkeiten / Build
+node_modules/
+__pycache__/
+dist/
